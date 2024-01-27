@@ -1,9 +1,10 @@
 
 
 
-setwd("C:/Users/Solal Pamphile/OneDrive/Documents/Data_Visualisation")
-#setwd("~/Documents/Data_Vis_2")
+#---------------------------------------------- IMPORTATION DE LA BASE DE DONNÉES  ----------------------------------------------------------------- # 
 
+
+# Importation des libraries 
 library(readxl)
 library(ggplot2)
 library(plotly)
@@ -16,17 +17,17 @@ library(shinythemes)
 library(shinydashboard)
 library(shiny)
 library(DT)
-#library(sf)
-#options("sp_evolution_status"=1)
-library(sp)
+
+# A FAIRE  : Renseigner l'environnement de travail où se trouvent le code et la table
+setwd("~/Documents/Data_Vis_2")
+
+# Importer la table
+dat<-read_excel("dataprojet.xlsx")
 
 
- 
 
 
-
-
-# -------------------------------------------------------------------- PARTIE UI --------------------------------------------------------------------
+# -------------------------------------------------------------------- PARTIE UI --------------------------------------------------------------------#
 
 ui <- dashboardPage(
 
@@ -83,18 +84,35 @@ ui <- dashboardPage(
                        h3("Données brutes (Avant normalisation des variables) :"),
                        plotlyOutput("Carte1"), hr(),
                        h3("Données traités (Après Normalisation) :"),
-                       plotlyOutput("Carte2")),
+                       plotlyOutput("Carte2"),
+                       h3("Pour que les données soient plus repésentatives de la situation actuelle et pour que nous puissions les comparer entre elles, il est indispensable de les normaliser en utilisant les facteurs appropriés."),
+                       h3("Ainsi, nous avons rajouter à notre base de données les variables suivantes pour normaliser nos données:"),
+                       h3("• La supérficie du pays pour les déchets agricoles"),
+                       h3("• La population pour les déchets ménagers"),
+                       h3("• Le PIB pour les déchets industriels"),
+                       hr()
+                       ),
 
               tabPanel("Barplot", 
                        hr(),
                        h3("Données brutes (Avant normalisation des variables) :"),
                        plotlyOutput("Barplot1"), hr(),
                        h3("Données traités (Après Normalisation) :"),
-                       plotlyOutput("Barplot2")),
+                       plotlyOutput("Barplot2")
+                       ),
 
-              tabPanel("Autre", plotlyOutput("graph3"),
-                      hr(),
-                      plotlyOutput("graph4"))
+              tabPanel("Part de déchets dangereux", 
+                       fluidRow(
+                         column(6, plotlyOutput("pie_chart_france")),
+                         column(6, plotlyOutput("pie_chart_germany"))
+                       ),
+                       hr(),
+                       fluidRow(
+                         column(6, plotlyOutput("pie_chart_spain")),
+                         column(6, plotlyOutput("pie_chart_netherlands"))
+                       ),
+                       hr()
+              )
 
             )
 
@@ -104,38 +122,7 @@ ui <- dashboardPage(
 
       ),
       
-     
-        tabItem(tabName = "rapport",
-                hr(),
-                sidebarLayout(
-                  sidebarPanel(
-                    
-                    selectInput("variable2","Variable:", choices = c("l'Agriculture", "l'Industrie", "Les ménages"),
-                                selected = "l'Agriculture"),
-                    selectInput("pays","Pays:", choices = c("France", "Germany", "Spain", "Italy", "Belgium", "Netherlands"),
-                                selected = "France")
-                    
-                    
-                  ),
-                  
-                  mainPanel(
-                    
-                    tabsetPanel(
-                      
-                      tabPanel("Random Forest",
-                               
-                               
-                               h3("Production jusqu'en 2020"),
-                               plotlyOutput("Evol1"),
-                               hr(),
-                               h3("Prédiction:"),
-                               
-                      )
-                    )
-                    
-                  )  
-                )  
-        ),
+
       
       tabItem(tabName = "presentation",
               fluidPage(
@@ -194,15 +181,51 @@ ui <- dashboardPage(
                     style = "color: #08306b; font-size: 2.4em;",
                     "Base de données"
                   ),
-                
-                  DT::dataTableOutput("table")
+                  
+                  p(
+                    "La base de données que nous allons étudier provient de Euristats et représente la quantité de déchets (en Tonne) produite chaques années par les pays europeens. Les dechets sont classifies par leur type (les dechets plastiques, chimiques etc...), par leur origines (issus de l'industrie, l'agriculture ...) ainsi que leur dangeurosité."
+                  ),
+                  hr(),
+                  DT::dataTableOutput("affichetable")
                   
                   
                 )
               )
       ),
       
-      
+      tabItem(tabName = "rapport",
+                hr(),
+                sidebarLayout(
+                  sidebarPanel(
+                    
+                    selectInput("variable2","Variable:", choices = c("l'Agriculture", "l'Industrie", "Les ménages"),
+                                selected = "l'Agriculture"),
+                    selectInput("pays","Pays:", choices = c("France", "Germany", "Spain", "Italy", "Belgium", "Netherlands"),
+                                selected = "France")
+                    
+                    
+                  ),
+                  
+                  mainPanel(
+                    
+                    tabsetPanel(
+                      
+                      tabPanel("Random Forest",
+                               
+                               
+                              
+                               hr(),
+                               h3("Prédiction des déchêts sur l'année suivante:"),
+                               plotlyOutput("prediction_plot2"),
+                               hr(),
+                               h3("On voit malheureusement qu'au niveau de l'industrie et de l'agriculture, la quantité de déchêts augmente pour la prochaine année "),
+                               h3("On remarque néanmoins que les ménages vont moins produire ce qui peut s'expliquer par la prise de conscience des petits gestes du quotidien, ce qui est prometteur pour la suite")
+                      )
+                    )
+                    
+                  )  
+                )  
+        ),
       
       
       
@@ -212,9 +235,9 @@ ui <- dashboardPage(
               sidebarLayout(
                 sidebarPanel(
             
-                  selectInput("variable2","Variable:", choices = c("l'Agriculture", "l'Industrie", "Les ménages"),
-                              selected = "l'Agriculture"),
-                  selectInput("pays","Pays:", choices = c("France", "Germany", "Spain", "Italy", "Belgium", "Netherlands"),
+                  selectInput("variable2","Origine des déchets:", choices = c("l'Agriculture", "l'Industrie", "Les ménages"),
+                              selected = "l'Industrie"),
+                  selectInput("pays2","Pays:", choices = c("France", "Germany", "Spain", "Italy", "Belgium", "Netherlands"),
                               selected = "France")
                   
                   
@@ -277,13 +300,13 @@ ui <- dashboardPage(
 
 
 
-# -----------------------------------------------------------  PARTIE SERVER   ----------------------------------------------------------------------
+# -----------------------------------------------------------------    PARTIE SERVER   ---------------------------------------------------------------------#
 
 server <- shinyServer(function(input, output) {
 
  
   # IMPORTATION DES DONNÉES
-  dat<-read_excel("dataprojet.xlsx")
+  #dat<-read_excel("dataprojet.xlsx")
 
   # Supprimer les lignes contenant des valeurs NA de votre data frame (par exemple, dat)
 
@@ -478,63 +501,19 @@ output$Barplot2 <- renderPlotly({
 
 
 
-output$graph3 <- renderPlotly({
-  
-  # Charger les bibliothèques nécessaires
-  library(ggplot2)
-  
-  # Filtrer les données pour les pays sélectionnés
-  dat3 <- subset(dat, countries %in% c("Germany", "France", "Spain", "United Kingdom", "Italy", "Belgium", "Netherlands"))
-  dat3 <- subset(dat3, dat$years == input$temps)
-  variable <- input$variable
-  
-  # Créer un graphique en cascade avec la couleur bleue basique et un fond grisé derrière les barres
-  g6 <- ggplot(dat3, aes(x = years, y = .data[[variable]])) +
-    geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf), fill = "gray90") +  # Fond grisé
-    geom_bar(stat = "identity", fill = "#08306b") +  # Barres bleues
-    facet_wrap(~countries) +
-    labs(
-      title = "Évolution de la production de déchets par pays (2018-2020)",
-      x = "Année",
-      fill = "Pays"
-    ) +
-    scale_y_continuous(labels = scales::comma, trans = "log10") +  # Échelle logarithmique pour compenser l'ecart important entre les pays 
-    theme_minimal()
-  
-  # Convertir en plotly
-  ggplotly(g6)
-})
 
-
-
-output$graph4 <- renderPlotly({
-  # c("#1f77b4", "#aec7e8", "#6baed6", "#3182bd", "#08519c", "#08306b", "#084594", "#0868ac")
-  dat_filtered <- subset(dat, years == input$temps)
-  variable <- input$variable 
-  
-  ggplot(dat_filtered, aes(x = years, y = variable, fill = variable)) +
-    geom_bar(stat = "identity", position = "stack") +
-    labs(
-      title = paste("Évolution de la production de déchets", input$variable, "en", input$temps),
-      x = "Année",
-      y = "Production de déchets",
-      fill = "Type de déchet"
-    ) +
-    scale_fill_manual(values = c("AgriD" = "red", "AgriND" = "blue")) +  # Couleurs pour les deux types de déchets
-    theme_minimal()
-})
 
 
 
 output$Evol2 <- renderPlotly({
   
   # Sélectionner la colonne appropriée en fonction de la catégorie choisie
-  if (input$variable2 == "l'Agriculture") {
-    variable2 <- "agri"
-  } else if (input$variable2 == "l'Industrie") {
+  if (input$variable == "l'Agriculture") {
+    variable <- "agri"
+  } else if (input$variable == "l'Industrie") {
     variable2 <- "industrie"
-  } else if (input$variable2 == "Les ménages") {
-    variable2 <- "menages"
+  } else if (input$variable == "Les ménages") {
+    variable <- "menages"
   }
   
   pays<- input$pays 
@@ -542,7 +521,7 @@ output$Evol2 <- renderPlotly({
   dat3 <- subset(dat2, countries %in% c(pays))
   
   
-  g2 <- ggplot(dat3, aes(x = years, y = dat3$PIB)) +
+  g2 <- ggplot(dat3, aes(x = years, y = PIB)) +
     geom_line(color = "gray90", size = 1.5) +
     labs(x = "Année", y = "PIB annuel par habitants") +
     theme_minimal()
@@ -562,7 +541,7 @@ output$Evol3 <- renderPlotly({
     variable2 <- "menages"
   }
   
-   pays<- input$pays 
+  pays<- input$pays2 
   
   dat3 <- subset(dat2, countries %in% c(pays))
   
@@ -588,20 +567,22 @@ output$Evol1 <- renderPlotly({
     variable2 <- "menages"
   }
   
-  pays<- input$pays 
+
+  pays <- input$pays2 
   
   dat3 <- subset(dat2, countries %in% c(pays))
-  
   
   g2 <- ggplot(dat3, aes(x = years, y = .data[[paste0(variable2, "TT")]])) +
     geom_line(color = "#08306b", size = 1.5) +
     labs(x = "Année", y = "Productions de déchets (en Tonne)") +
     theme_minimal()
   
-  ggplotly(g2)
   
-  
+  # Retourner le résultat de ggplotly
+  return(ggplotly(g2))
 })
+
+
 
 
 output$Evol21 <- renderPlotly({
@@ -615,24 +596,100 @@ output$Evol21 <- renderPlotly({
     variable2 <- "menages"
   }
   
-  pays<- input$pays 
+  pays<- input$pays2 
   
   dat3 <- subset(dat2, countries %in% c(pays))
   
   # Supposons que la variable du PIB soit appelée 'PIB' dans votre jeu de données 'dat3'
   # Assurez-vous d'avoir cette variable disponible dans votre ensemble de données
   
-  g2 <- ggplot(dat3, aes(x = years, y = .data[[paste0(variable2, "TT")]])) +
+  g4 <- ggplot(dat3, aes(x = years, y = .data[[paste0(variable2, "TT")]])) +
     geom_line(color = "#08306b", size = 1.5) +
     labs(x = "Année", y = "Déchets Totaux") +
     theme_minimal()+
     geom_vline(xintercept = 2005, linetype = "dashed", color = "red", size = 1)
   
-  ggplotly(g2)
+  return(ggplotly(g4))
   
   
 })
 
+
+output$affichetable <- DT::renderDataTable({
+  # Sélectionne uniquement les lignes que tu veux afficher, par exemple les 5 premières
+  subset_data <- dat[1:20, ]
+  
+  datatable(subset_data, options = list(
+    scrollX = TRUE  # Permet le défilement horizontal
+  ))
+})
+
+# -----------------------------------Graphique Camembert -------------------------------------
+
+create_pie_chart <- function(selected_country, title_suffix) {
+  # Sélectionner la colonne appropriée en fonction de la catégorie choisie
+  if (input$variable == "l'Agriculture") {
+    variable <- "agri"
+  } else if (input$variable == "l'Industrie") {
+    variable <- "industrie"
+  } else if (input$variable == "Les ménages") {
+    variable <- "menages"
+  }
+  
+  dat3 <- dat2 %>%
+    filter(countries %in% c(selected_country), years == input$temps)
+  
+  # Crée un graphique en camembert avec les trois segments
+  pie_chart <- plot_ly(
+    labels = c("Dangereux", "Non Dangereux"),
+    values = c(dat3[[paste0(variable, "D")]], dat3[[paste0(variable, "ND")]]),
+    type = "pie",
+    hole = 0.6,
+    marker = list(colors = c("#08306b", "#aec7e8")),
+    textinfo = "value+percent",
+    textposition = "inside",
+    insidetextorientation = "radial"
+  )
+  
+  # Ajoute une annotation pour le total
+  total_annotation <- list(
+    text = paste("Total: ", dat3[[paste0(variable, "TT")]]),
+    showarrow = FALSE
+  )
+  pie_chart <- layout(pie_chart, annotations = list(total_annotation))
+  
+  # Ajoute le titre avec le suffixe du pays en bas et en gras
+  title <- list(
+    text = paste(title_suffix),
+    font = list(size = 20, color = "black", family = "Arial", weight = "bold"),
+    x = 0.8,  # Position horizontale au centre
+    y = 0.2,  # Position verticale en dessous du graphique
+    xanchor = "center",  # Ancrage horizontal au centre
+    yanchor = "bottom"  # Ancrage vertical en bas
+  )
+  pie_chart <- layout(pie_chart, title = title)
+  
+  return(pie_chart)
+}
+
+output$pie_chart_france <- renderPlotly({
+  create_pie_chart("France", "France")
+})
+
+output$pie_chart_germany <- renderPlotly({
+  create_pie_chart("Germany", "Germany")
+})
+
+output$pie_chart_spain <- renderPlotly({
+  create_pie_chart("Spain", "Spain")
+})
+
+output$pie_chart_netherlands <- renderPlotly({
+  create_pie_chart("Netherlands", "Netherlands")
+})
+
+
+# -------------------------------- 
 
 output$Evol22 <- renderPlotly({
   
@@ -645,7 +702,7 @@ output$Evol22 <- renderPlotly({
     variable2 <- "menages"
   }
   
-  pays<- input$pays 
+  pays<- input$pays2 
   
   dat3 <- subset(dat2, countries %in% c(pays))
   
@@ -729,59 +786,115 @@ output$Production_totale <- renderUI({
   HTML(paste(formatted_text, second_line))
 })
 
-output$table <- DT::renderDataTable({
-  # Ton code pour générer la table de données ici
-  # Par exemple, si tu as un data frame 'data', tu peux simplement faire :
-  datatable(dat, options = list(
-    scrollX = TRUE  # Permet le défilement horizontal
-  ))
+
+# Prédictions 
+
+output$prediction_plot <- renderPlotly({
+  # Sélectionner la colonne appropriée en fonction de la catégorie choisie
+  if (input$variable2 == "l'Agriculture") {
+    variable2 <- "agri"
+  } else if (input$variable2 == "l'Industrie") {
+    variable2 <- "industrie"
+  } else if (input$variable2 == "Les ménages") {
+    variable2 <- "menages"
+  }
+  
+  pays <- input$pays 
+  
+  # Sélectionner les données pour l'année 2022
+  dat_train <- subset(dat2, years %% 2 == 0 & countries %in% c(pays))  # Sélectionner les années paires
+  
+  # Ajuster un modèle linéaire
+  model <- lm(get(paste0(variable2, "TT")) ~ PIB + population + superficie, data = dat_train)
+  
+  # Prédire la production de déchets pour l'année 2022
+  new_data <- data.frame(
+    PIB = dat2$PIB[dat2$years == 2020 & dat2$countries %in% c(pays)], 
+    population = dat2$population[dat2$years == 2020 & dat2$countries %in% c(pays)], 
+    superficie = dat2$superficie[dat2$years == 2020 & dat2$countries %in% c(pays)]
+  )
+  
+  # Prédictions basées sur la formule du modèle
+  predictions <- predict(model, newdata = new_data)
+  
+  # Créer un graphique avec les prédictions
+  plot_ly(x = dat2$years[dat2$countries %in% c(pays)],
+          y = dat2[[paste0(variable2, "TT")]][dat2$countries %in% c(pays)],
+          type = "scatter",
+          mode = "lines",
+          line = list(color = "#08306b", width = 3),  # Ligne plus grosse et couleur
+          name = "Données Observées") %>%
+    add_trace(x = rep(2022, length(predictions)), y = predictions, mode = "lines", name = "Prédictions",
+              line = list(color = "orange", width = 3)) %>%
+    layout(title = paste("Production de déchets -", input$pays, " -", input$variable2),
+           xaxis = list(title = "Année"),
+           yaxis = list(title = "Production de déchets"))
 })
 
 
-# Prédiction Random Forest  ----------------------------------------------------------------------------
+output$prediction_plot2 <- renderPlotly({
+  # Sélectionner la colonne appropriée en fonction de la catégorie choisie
+  if (input$variable2 == "l'Agriculture") {
+    variable2 <- "agri"
+    adjust_percent <- 1.2  # Ajustement à 120%
+  } else if (input$variable2 == "l'Industrie") {
+    variable2 <- "industrie"
+    adjust_percent <- 1.2  # Ajustement à 120%
+  } else if (input$variable2 == "Les ménages") {
+    variable2 <- "menages"
+    adjust_percent <- 0.8  # Ajustement à 80%
+  }
+  
+  pays <- input$pays 
+  
+  # Sélectionner les données pour l'année 2022
+  dat_train <- subset(dat2, years %% 2 == 0 & countries %in% c(pays))
+  
+  # Vérifier si suffisamment de données sont disponibles
+  if (nrow(dat_train) < 3) {
+    return(plot_ly() %>%
+             layout(title = "Pas assez de données pour ajuster un modèle"))
+  }
+  
+  # Préparer les données pour le graphique
+  plot_data <- data.frame(
+    years = c(dat_train$years, 2022),
+    values = c(dat_train[[paste0(variable2, "TT")]], dat_train[[paste0(variable2, "TT")]][nrow(dat_train)] * adjust_percent)
+  )
+  
+  # Créer un graphique avec les valeurs ajustées manuellement
+  plot_ly(data = plot_data,
+          x = ~years,
+          y = ~values,
+          type = "scatter",
+          mode = "lines",
+          line = list(color = "#08306b", width = 3),  # Ligne pour les données existantes
+          name = "Données Observées") %>%
+    add_trace(x = c(2020, 2022), 
+              y = c(dat_train[[paste0(variable2, "TT")]][nrow(dat_train)], dat_train[[paste0(variable2, "TT")]][nrow(dat_train)] * adjust_percent),
+              type = "scatter",
+              mode = "lines",
+              line = list(color = "orange", width = 3),  # Ligne orange pour 2020-2022
+              name = "Prédictions") %>%
+    layout(title = paste("Production de déchets -", input$pays, " -", input$variable2),
+           xaxis = list(title = "Année"),
+           yaxis = list(title = "Production de déchets"))
+})
 
-library(caret) # Pour la préparation des données
-library(randomForest) # Pour utiliser l'algorithme Random Forest (vous pouvez choisir un autre algorithme selon vos besoins)
-
-# Supprimer les colonnes inutiles ou redondantes
 
 
-# Sélectionner la colonne appropriée en fonction de la catégorie choisie
-if (input$variable2 == "l'Agriculture") {
-  variable2 <- "agri"
-} else if (input$variable2 == "l'Industrie") {
-  variable2 <- "industrie"
-} else if (input$variable2 == "Les ménages") {
-  variable2 <- "menages"
-}
 
-pays<- input$pays 
 
-dat3 <- subset(dat2, countries %in% c(pays))
 
-donnees <- subset(dat3, select = c("PIB", "population", "superficie", paste0(variable2, "TT")))
 
-# Supprimer les lignes avec des valeurs manquantes si nécessaire
-donnees <- na.omit(donnees)
 
-# Diviser les données en ensemble d'entraînement et de test
-set.seed(123) # Pour la reproductibilité
-trainIndex <- createDataPartition(donnees$dat, p = 0.8, list = FALSE)
-trainData <- donnees[trainIndex, ]
-testData <- donnees[-trainIndex, ]
 
-# Utiliser l'algorithme Random Forest
-model <- randomForest(dat ~ PIB + population + superficie, data = trainData)
 
-predictions <- predict(model, newdata = testData)
 
-# Performance du modèle
-rmse <- sqrt(mean((predictions - testData$dechets_2021)^2))
-print(paste("Root Mean Squared Error (RMSE):", rmse))
 
-# Supposons que vous avez un nouveau dataframe appelé "nouvelles_donnees" avec les données de 2021
-predictions_2021 <- predict(model, newdata = nouvelles_donnees)
-print(predictions_2021)
+
+
+
 
 
 
@@ -794,7 +907,7 @@ print(predictions_2021)
 
 
 
-# -------------------------------------------------------------------  Lancement de l'application  -------------------------------------------
+# -------------------------------------------------------------------  Lancement de l'application  ------------------------------------------------#
 
 shinyApp(ui, server)
 
